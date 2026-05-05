@@ -3,6 +3,24 @@ Download here: https://github.com/ElliotGarbus/MidiClockGenerator/releases
 
 This is a simple MIDI clock generator.  It can generate midi beat clock between 47 and 6000 BPM
 
+## Requirements
+
+- Python 3.10+ (tested with Python 3.14)
+- Kivy
+- mido
+- python-osc
+- python-rtmidi
+
+Install runtime dependencies with:
+
+```bash
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements.txt
+```
+
+On macOS, use `python3 main.py` to launch the app.
+
+
 Directions:
 * Select the midi connection from the dropdown — the first entry toggles MIDI output on/off
 * Use the Slider, Tap, or input the Beats per Minute
