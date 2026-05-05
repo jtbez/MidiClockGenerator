@@ -266,6 +266,12 @@ if __name__ == '__main__':
             config.setdefaults('Window', {'top': window_top,
                                           'left': window_left})
             config.setdefaults('OSC', {'port': 8000})
+            config.setdefaults('Midi', {
+                'bpm': 60,
+                'range': '47-500',
+                'selected_port': '',
+                'output_enabled': '1'
+            })
 
         def open_settings(self, *largs):
             pass
@@ -292,6 +298,11 @@ if __name__ == '__main__':
             config.set('Window', 'height', int(Window.size[1] / Metrics.density))
             config.set('Window', 'top', Window.top)
             config.set('Window', 'left', Window.left)
+            if self.root:
+                config.set('Midi', 'bpm', int(self.root.ids.bpm_slider.value))
+                config.set('Midi', 'range', self.root.ids.slider_range.text)
+                config.set('Midi', 'selected_port', self.selected_midi_port)
+                config.set('Midi', 'output_enabled', int(self.midi_output_enabled))
             return False
 
         def on_port_selected(self, port):
@@ -343,14 +354,36 @@ if __name__ == '__main__':
         def on_start(self):
             self.midi_ports = mido.get_output_names()
             config = self.config
+            self.selected_midi_port = config.getdefault('Midi', 'selected_port', '')
+            self.midi_output_enabled = config.getdefault('Midi', 'output_enabled', '1') in ('1', 'True', 'true', 'yes')
+            bpm_value = int(config.getdefault('Midi', 'bpm', 60))
+            range_text = config.getdefault('Midi', 'range', '47-500')
+
             width = config.getdefault('Window', 'width', window_width)
             height = config.getdefault('Window', 'height', window_height)
             Window.size = (int(width), int(height))
             Window.top = int(float(config.getdefault('Window', 'top', window_top)))
             Window.left = int(float(config.getdefault('Window', 'left', window_left)))
+
+            if self.selected_midi_port not in self.midi_ports:
+                self.selected_midi_port = ''
+
+            if self.root:
+                self.root.ids.bpm_slider.value = bpm_value
+                self.root.ids.slider_range.text = range_text
+                self.root.ids.slider_range.set_min_max()
+                port_spinner = self.root.ids.port_1
+                port_spinner.text = ('** Enable Output **' if not self.midi_output_enabled else
+                                     self.selected_midi_port or 'Select Midi Out')
+
             self.osc_port = int(config.getdefault('OSC', 'port', 8000))
             ok, msg = self._osc_server.start(self.osc_port)
             self.osc_status = msg
+
+            if self.midi_output_enabled and self.selected_midi_port:
+                self._led_started = True
+                self.flash_led_on(None)
+                self.mcg.launch_process(self.selected_midi_port)
 
         def on_stop(self):
             if self.mcg.midi_process:
