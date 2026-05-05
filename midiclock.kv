@@ -46,63 +46,62 @@ BoxLayout:
     Spinner:
         id: port_1
         text: 'Select Midi Out'
-        values: app.midi_ports
+        values: (['** Disable Output **'] if app.midi_output_enabled else ['** Enable Output **']) + app.midi_ports
         font_size: fs
         shorten: True
         text_size: self.size
         valign: 'center'
         halign: 'center'
-        on_text: app.mcg.launch_process(port_1.text)
+        on_text: app.on_port_selected(port_1.text)
     TapButton:
         id: tap_btn
         text: 'Tap'
         font_size: fs
         on_press: self.process_tap(bpm_slider, slider_range)
     Button:
-        size_hint_y: 0.7
         text: 'OSC'
         font_size: fs
         on_release: app.show_osc_settings()
 
 
 <OscSettingsPopup>:
-    title: 'OSC Settings'
+    title: 'OSC'
     size_hint: (None, None)
-    size: ('300dp', '200dp')
+    size: ('160dp', '160dp')
     auto_dismiss: False
     BoxLayout:
         orientation: 'vertical'
-        padding: '10dp'
-        spacing: '8dp'
+        padding: '6dp'
+        spacing: '4dp'
         BoxLayout:
             size_hint_y: None
-            height: '40dp'
+            height: '32dp'
             Label:
-                text: 'Listen Port:'
-                font_size: fs
-                size_hint_x: 0.55
+                text: 'Port:'
+                font_size: '14sp'
+                size_hint_x: 0.4
             TextInput:
                 id: port_input
                 text: str(app.osc_port)
                 multiline: False
-                font_size: fs
+                font_size: '14sp'
                 input_filter: 'int'
-                size_hint_x: 0.45
+                size_hint_x: 0.6
         Label:
             text: app.osc_status
-            font_size: '16sp'
+            font_size: '12sp'
             color: (0.4, 1, 0.4, 1) if 'Listening' in self.text else (1, 0.5, 0.5, 1)
         BoxLayout:
             size_hint_y: None
-            height: '40dp'
-            spacing: '8dp'
+            height: '32dp'
+            spacing: '4dp'
             Button:
                 text: 'Cancel'
-                font_size: fs
+                font_size: '14sp'
                 on_release: root.dismiss()
             Button:
                 text: 'Save'
-                font_size: fs
+                font_size: '14sp'
                 on_release:
                     app.save_osc_settings(int(port_input.text or '8000'))
                     root.dismiss()

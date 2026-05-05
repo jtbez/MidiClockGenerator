@@ -4,7 +4,7 @@ Download here: https://github.com/ElliotGarbus/MidiClockGenerator/releases
 This is a simple MIDI clock generator.  It can generate midi beat clock between 47 and 6000 BPM
 
 Directions:
-* Select the midi connection
+* Select the midi connection from the dropdown — the first entry toggles MIDI output on/off
 * Use the Slider, Tap, or input the Beats per Minute
 * The Range control selects different ranges for the slider
 
@@ -19,6 +19,11 @@ OSC addresses:
 | `/bpm/<value>` | Set BPM (47–6000) | `/bpm/120` |
 | `/range/<value>` | Set slider range | `/range/47-500` |
 | `/tap` | Trigger tap tempo | `/tap` |
+| `/output/enable` | Enable MIDI output | `/output/enable` |
+| `/output/disable` | Disable MIDI output | `/output/disable` |
+| `/output/toggle` | Toggle MIDI output on/off | `/output/toggle` |
+
+BPM and range can also be sent as an OSC argument rather than in the address path — e.g. `/bpm` with a float argument of `120.0` is equivalent to `/bpm/120`.
 
 Valid range values: `47-500`, `400-1000`, `1200`, `1500`, `2000`, `3000`, `6000`
 

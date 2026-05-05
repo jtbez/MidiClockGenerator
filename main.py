@@ -27,9 +27,11 @@ class MidiClockGen:
     def launch_process(self, out_port):
         if self.midi_process:  # if the process exists, close prior to creating a new one
             self.end_process()
-        else:                  # if this is the first time, start flashing the panel led
+        else:
             app = App.get_running_app()
-            app.flash_led_on(None)
+            if not app._led_started:
+                app._led_started = True
+                app.flash_led_on(None)
         self._run_code.value = 1
         self.midi_process = Process(target=self._midi_clock_generator,
                                     args=(out_port, self.shared_bpm, self._run_code),
@@ -40,6 +42,7 @@ class MidiClockGen:
         self._run_code.value = 0
         self.midi_process.join()
         self.midi_process.close()
+        self.midi_process = None
 
 
 if __name__ == '__main__':
@@ -137,6 +140,15 @@ if __name__ == '__main__':
                             app.root.ids.slider_range)
                     Clock.schedule_once(_do_tap, 0)
 
+                elif ns == 'output':
+                    cmd = parts[1] if len(parts) >= 2 else (str(args[0]).lower() if args else None)
+                    if cmd == 'enable':
+                        Clock.schedule_once(lambda dt: self.app.enable_midi_output(), 0)
+                    elif cmd == 'disable':
+                        Clock.schedule_once(lambda dt: self.app.disable_midi_output(), 0)
+                    elif cmd == 'toggle':
+                        Clock.schedule_once(lambda dt: self.app.toggle_midi_output(), 0)
+
             except Exception as e:
                 print(f'OSC handler error: {e}')
 
@@ -223,18 +235,27 @@ if __name__ == '__main__':
         mcg = MidiClockGen()
         panel_led = BooleanProperty(False)
         osc_status = StringProperty('Stopped')
+        midi_output_enabled = BooleanProperty(True)
+        selected_midi_port = StringProperty('')
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
             self.osc_port = 8000
             self._osc_server = OscServer(self)
+            self._led_started = False
 
         def flash_led_off(self, _):
+            if not self._led_started:
+                self.panel_led = False
+                return
             self.panel_led = self.root.ids.bpm_slider.value >= 667
             rate = (60 / int(self.root.ids.bpm_slider.value)) * .75
             Clock.schedule_once(self.flash_led_on, rate)
 
         def flash_led_on(self, _):
+            if not self._led_started:
+                self.panel_led = False
+                return
             self.panel_led = True
             rate = (60 / int(self.root.ids.bpm_slider.value)) * .25
             Clock.schedule_once(self.flash_led_off, rate)
@@ -272,6 +293,41 @@ if __name__ == '__main__':
             config.set('Window', 'top', Window.top)
             config.set('Window', 'left', Window.left)
             return False
+
+        def on_port_selected(self, port):
+            if port in ('** Disable Output **', '** Enable Output **'):
+                self.toggle_midi_output()
+                Clock.schedule_once(
+                    lambda dt: setattr(
+                        self.root.ids.port_1, 'text',
+                        self.selected_midi_port or 'Select Midi Out'), 0)
+                return
+            if port == 'Select Midi Out' or port == self.selected_midi_port:
+                return
+            self.selected_midi_port = port
+            if self.midi_output_enabled:
+                self.mcg.launch_process(port)
+
+        def enable_midi_output(self):
+            if not self.midi_output_enabled:
+                self.midi_output_enabled = True
+                if self.selected_midi_port:
+                    self._led_started = True
+                    self.flash_led_on(None)
+                    self.mcg.launch_process(self.selected_midi_port)
+
+        def disable_midi_output(self):
+            if self.midi_output_enabled:
+                self.midi_output_enabled = False
+                self._led_started = False
+                if self.mcg.midi_process:
+                    self.mcg.end_process()
+
+        def toggle_midi_output(self):
+            if self.midi_output_enabled:
+                self.disable_midi_output()
+            else:
+                self.enable_midi_output()
 
         def show_osc_settings(self):
             OscSettingsPopup().open()
