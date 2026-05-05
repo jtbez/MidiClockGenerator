@@ -56,7 +56,7 @@ if __name__ == '__main__':
     from kivy.uix.button import Button
     from kivy.utils import platform
 
-    set_start_method('spawn')  # required for mac prior to Python 3.8
+    set_start_method('spawn', force=True)  # required for mac
 
     class IntegerInput(TextInput):
         def insert_text(self, substring, from_undo=False):
