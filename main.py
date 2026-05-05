@@ -47,12 +47,16 @@ class MidiClockGen:
 
 if __name__ == '__main__':
     freeze_support()  # for pyinstaller on Windows
+    import os
+    import sys
+
     from configstartup import window_left, window_height, window_top, window_width
     from kivy.app import App
     from kivy.clock import Clock
     from kivy.core.window import Window
     from kivy.metrics import Metrics
     from kivy.properties import ListProperty, BooleanProperty, StringProperty
+    from kivy.resources import resource_add_path
     from kivy.uix.textinput import TextInput
     from kivy.uix.spinner import Spinner
     from kivy.uix.button import Button
@@ -61,6 +65,23 @@ if __name__ == '__main__':
     import threading
     from pythonosc import dispatcher as osc_dispatcher
     from pythonosc.osc_server import ThreadingOSCUDPServer
+
+    def _get_resource_path():
+        if getattr(sys, 'frozen', False):
+            if hasattr(sys, '_MEIPASS'):
+                return sys._MEIPASS
+            if sys.platform == 'darwin':
+                exe_dir = os.path.dirname(sys.executable)
+                resources_dir = os.path.abspath(os.path.join(exe_dir, '..', 'Resources'))
+                if os.path.isdir(resources_dir):
+                    return resources_dir
+        return os.path.dirname(os.path.abspath(__file__))
+
+    resource_path = _get_resource_path()
+    resource_add_path(resource_path)
+    resource_add_path(os.path.join(resource_path, 'images'))
+    print(f'[RESOURCE] resource_path={resource_path}', file=sys.stderr)
+    print(f'[RESOURCE] image_exists={os.path.exists(os.path.join(resource_path, "images", "meris_on.png"))}', file=sys.stderr)
 
     set_start_method('spawn', force=True)  # required for mac
 
@@ -237,6 +258,7 @@ if __name__ == '__main__':
         osc_status = StringProperty('Stopped')
         midi_output_enabled = BooleanProperty(True)
         selected_midi_port = StringProperty('')
+        images_dir = StringProperty('')
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
@@ -285,7 +307,8 @@ if __name__ == '__main__':
 
         def build(self):
             self.title = 'MidiClock'
-            self.icon = 'images/quarter note.png'
+            self.images_dir = os.path.join(resource_path, 'images')
+            self.icon = os.path.join(self.images_dir, 'quarter note.png')
             Window.minimum_width = window_width
             Window.minimum_height = window_height
             self.use_kivy_settings = False

@@ -21,6 +21,42 @@ python3 -m pip install -r requirements.txt
 On macOS, use `python3 main.py` to launch the app.
 
 
+### Building the macOS App Bundle from Scratch
+
+This project uses `PyInstaller` to create the macOS `.app` bundle.
+
+1. Install dependencies:
+
+```bash
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements.txt
+python3 -m pip install pyinstaller
+```
+
+2. Clean prior build output:
+
+```bash
+cd /path/to/MidiClockGenerator
+rm -rf dist/MidiClock dist/MidiClock.app build
+```
+
+3. Build the app bundle:
+
+```bash
+python3 -m PyInstaller --clean --noconfirm MidiClockDist/mac.spec
+```
+
+4. The built application will be in `dist/MidiClock.app`.
+
+5. Run it from the command line or by double-clicking the bundle in Finder:
+
+```bash
+./dist/MidiClock.app/Contents/MacOS/MidiClock
+```
+
+If you update `main.py` or `midiclock.kv`, rebuild with the same commands above to refresh the packaged app.
+
+
 Directions:
 * Select the midi connection from the dropdown — the first entry toggles MIDI output on/off
 * Use the Slider, Tap, or input the Beats per Minute
