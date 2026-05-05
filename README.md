@@ -8,7 +8,24 @@ Directions:
 * Use the Slider, Tap, or input the Beats per Minute
 * The Range control selects different ranges for the slider
 
-Developer notes:
+## OSC Control
+
+The app can be controlled remotely via OSC (Open Sound Control). Click the **OSC** button at the bottom of the window to open the settings panel, where you can set the UDP listen port (default: 8000). The port is saved persistently and the server starts automatically on launch.
+
+OSC addresses:
+
+| Address | Description | Example |
+|---|---|---|
+| `/bpm/<value>` | Set BPM (47–6000) | `/bpm/120` |
+| `/range/<value>` | Set slider range | `/range/47-500` |
+| `/tap` | Trigger tap tempo | `/tap` |
+
+Valid range values: `47-500`, `400-1000`, `1200`, `1500`, `2000`, `3000`, `6000`
+
+All incoming OSC messages update the UI in sync — the slider, range spinner, and BPM field all reflect the new value immediately.
+
+## Developer notes
+
 Most of the code of interest in is main.py.  The program uses multi-processing to run the GUI in one process, and the midi clock generator in another process.
 The method, _midi_clock_generator, of the class MidiClockGen, has a sleep command in the inner loop.  This is used to save power for most of the time between beats.
 At beats of 3000 BPM or above sleep() is not used.
@@ -41,3 +58,5 @@ There are a few other files in the repository in '/dev tests' that are not part 
 * miditestclass.py - a simple test of multiprocessing using a class
 
 The standalone executables on the release page are built with pyinstaller using the platform specific release files in the MidiClockDist directory.
+
+The OSC server uses the `python-osc` library (`python-osc` on PyPI). Install with `pip install python-osc`.

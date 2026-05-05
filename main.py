@@ -12,7 +12,6 @@ class MidiClockGen:
 
     @staticmethod
     def _midi_clock_generator(out_port, bpm, run):
-        # print(f'__name__: {__name__}')
         midi_output = mido.open_output(out_port)
         clock_tick = mido.Message('clock')
         while run.value:
@@ -50,13 +49,97 @@ if __name__ == '__main__':
     from kivy.clock import Clock
     from kivy.core.window import Window
     from kivy.metrics import Metrics
-    from kivy.properties import ListProperty, BooleanProperty
+    from kivy.properties import ListProperty, BooleanProperty, StringProperty
     from kivy.uix.textinput import TextInput
     from kivy.uix.spinner import Spinner
     from kivy.uix.button import Button
+    from kivy.uix.popup import Popup
     from kivy.utils import platform
+    import threading
+    from pythonosc import dispatcher as osc_dispatcher
+    from pythonosc.osc_server import ThreadingOSCUDPServer
 
     set_start_method('spawn', force=True)  # required for mac
+
+
+    class OscServer:
+        def __init__(self, app):
+            self.app = app
+            self._server = None
+            self._thread = None
+
+        def start(self, port):
+            self.stop()
+            d = osc_dispatcher.Dispatcher()
+            d.set_default_handler(self._handle)
+            try:
+                self._server = ThreadingOSCUDPServer(('', port), d)
+                self._thread = threading.Thread(
+                    target=self._server.serve_forever, daemon=True)
+                self._thread.start()
+                print(f'OSC server listening on port {port}')
+                return True, f'Listening on port {port}'
+            except OSError as e:
+                print(f'OSC server failed to start: {e}')
+                return False, f'Error: {e}'
+
+        def stop(self):
+            if self._server:
+                self._server.shutdown()
+                self._server = None
+                self._thread = None
+
+        def _handle(self, address, *args):
+            try:
+                print(f'OSC {address}' + (f' {args[0]}' if args else ''))
+                parts = address.strip('/').split('/')
+                if not parts:
+                    return
+                ns = parts[0]
+
+                if ns == 'bpm':
+                    bpm_val = None
+                    if len(parts) >= 2:
+                        try:
+                            bpm_val = int(float(parts[1]))
+                        except ValueError:
+                            pass
+                    elif args:
+                        try:
+                            bpm_val = int(float(args[0]))
+                        except (ValueError, TypeError):
+                            pass
+                    if bpm_val is not None:
+                        bpm_val = max(47, min(6000, bpm_val))
+                        Clock.schedule_once(
+                            lambda dt, v=bpm_val:
+                                setattr(self.app.root.ids.bpm_slider, 'value', v), 0)
+
+                elif ns == 'range':
+                    range_val = None
+                    if len(parts) >= 2:
+                        range_val = parts[1]
+                    elif args:
+                        range_val = str(args[0])
+                    if range_val is not None:
+                        def _update_range(dt, rv=range_val):
+                            spinner = self.app.root.ids.slider_range
+                            if rv in spinner.values:
+                                spinner.text = rv
+                                spinner.set_min_max()
+                        Clock.schedule_once(_update_range, 0)
+
+                elif ns == 'tap':
+                    def _do_tap(dt):
+                        app = self.app
+                        app.root.ids.tap_btn.process_tap(
+                            app.root.ids.bpm_slider,
+                            app.root.ids.slider_range)
+                    Clock.schedule_once(_do_tap, 0)
+
+            except Exception as e:
+                print(f'OSC handler error: {e}')
+
 
     class IntegerInput(TextInput):
         def insert_text(self, substring, from_undo=False):
@@ -130,10 +213,21 @@ if __name__ == '__main__':
             self.tap_num = 0
             self.beats.clear()
 
+
+    class OscSettingsPopup(Popup):
+        pass
+
+
     class MidiClockApp(App):
         midi_ports = ListProperty([])
         mcg = MidiClockGen()
         panel_led = BooleanProperty(False)
+        osc_status = StringProperty('Stopped')
+
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.osc_port = 8000
+            self._osc_server = OscServer(self)
 
         def flash_led_off(self, _):
             self.panel_led = self.root.ids.bpm_slider.value >= 667
@@ -150,6 +244,7 @@ if __name__ == '__main__':
                                           'height': window_height})
             config.setdefaults('Window', {'top': window_top,
                                           'left': window_left})
+            config.setdefaults('OSC', {'port': 8000})
 
         def open_settings(self, *largs):
             pass
@@ -178,19 +273,33 @@ if __name__ == '__main__':
             config.set('Window', 'left', Window.left)
             return False
 
+        def show_osc_settings(self):
+            OscSettingsPopup().open()
+
+        def save_osc_settings(self, port):
+            port = max(1, min(65535, port))
+            self.osc_port = port
+            self.config.set('OSC', 'port', port)
+            self.config.write()
+            ok, msg = self._osc_server.start(port)
+            self.osc_status = msg
+
         def on_start(self):
             self.midi_ports = mido.get_output_names()
-            # Set Window to previous size and position
             config = self.config
             width = config.getdefault('Window', 'width', window_width)
             height = config.getdefault('Window', 'height', window_height)
             Window.size = (int(width), int(height))
             Window.top = int(float(config.getdefault('Window', 'top', window_top)))
             Window.left = int(float(config.getdefault('Window', 'left', window_left)))
+            self.osc_port = int(config.getdefault('OSC', 'port', 8000))
+            ok, msg = self._osc_server.start(self.osc_port)
+            self.osc_status = msg
 
         def on_stop(self):
             if self.mcg.midi_process:
                 self.mcg.end_process()
+            self._osc_server.stop()
             self.config.write()
 
 
