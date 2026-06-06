@@ -83,7 +83,8 @@ if __name__ == '__main__':
     print(f'[RESOURCE] resource_path={resource_path}', file=sys.stderr)
     print(f'[RESOURCE] image_exists={os.path.exists(os.path.join(resource_path, "images", "meris_on.png"))}', file=sys.stderr)
 
-    set_start_method('spawn', force=True)  # required for mac
+    if sys.platform in ('darwin', 'win32'):
+        set_start_method('spawn', force=True)  # required for mac/windows
 
 
     class OscServer:
