@@ -18,8 +18,53 @@ python3 -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt
 ```
 
-On macOS, use `python3 main.py` to launch the app.
+On macOS or Linux/Raspberry Pi, use `python3 main.py` to launch the app.
 
+### Linux / Raspberry Pi system dependencies
+
+Before installing Python packages, install the required system libraries:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+    python3-pip \
+    libasound2-dev \
+    libportmidi-dev \
+    libsdl2-dev \
+    libsdl2-image-dev \
+    libsdl2-mixer-dev \
+    libsdl2-ttf-dev \
+    libgl1-mesa-dev \
+    libgles2-mesa-dev \
+    libmtdev-dev \
+    xclip
+```
+
+
+### Building the Linux / Raspberry Pi executable
+
+1. Install system dependencies (see above), then install Python packages:
+
+```bash
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements.txt
+python3 -m pip install pyinstaller
+```
+
+2. Build:
+
+```bash
+cd /path/to/MidiClockGenerator
+python3 -m PyInstaller --clean --noconfirm MidiClockDist/linux.spec
+```
+
+3. The built application will be in `dist/MidiClock/MidiClock`. Run it with:
+
+```bash
+./dist/MidiClock/MidiClock
+```
+
+---
 
 ### Building the macOS App Bundle from Scratch
 
