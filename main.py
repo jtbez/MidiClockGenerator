@@ -302,7 +302,7 @@ if __name__ == '__main__':
         def get_application_config(self):
             if platform == 'win':
                 s = '%(appdir)s/%(appname)s.ini'
-            else:  # mac will not write into app folder
+            else:  # mac and linux: write to home directory
                 s = '~/.%(appname)s.ini'
             return super().get_application_config(defaultpath=s)
 
